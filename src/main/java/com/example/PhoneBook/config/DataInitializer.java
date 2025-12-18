@@ -5,6 +5,7 @@ import com.example.PhoneBook.models.Contact;
 import com.example.PhoneBook.models.RoleName;
 import com.example.PhoneBook.services.ContactService;
 import com.example.PhoneBook.services.UserService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +18,21 @@ public class DataInitializer implements CommandLineRunner {
     private final UserService userService;
     private final ContactService contactService;
 
+    @Value("${app.superadmin.username:superadmin}")
+    private String superadminUsername;
+
+    @Value("${app.superadmin.password:admin123}")
+    private String superadminPassword;
+
+    @Value("${app.superadmin.email:superadmin@company.com}")
+    private String superadminEmail;
+
+    @Value("${app.create-test-users:true}")
+    private boolean createTestUsers;
+
+    @Value("${app.create-test-contacts:true}")
+    private boolean createTestContacts;
+
     public DataInitializer(UserService userService, ContactService contactService) {
         this.userService = userService;
         this.contactService = contactService;
@@ -24,30 +40,47 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
+        System.out.println("=== DataInitializer started ===");
+        System.out.println("Superadmin username: " + superadminUsername);
+        System.out.println("Create test users: " + createTestUsers);
+        System.out.println("Create test contacts: " + createTestContacts);
+
         createSuperAdmin();
-        createTestUsers();
-        createTestContacts();
+
+        if (createTestUsers) {
+            createTestUsers();
+        }
+
+        if (createTestContacts) {
+            createTestContacts();
+        }
+
+        System.out.println("=== DataInitializer finished ===");
     }
 
     private void createSuperAdmin() {
         try {
-            userService.loadUserByUsername("superadmin");
-            System.out.println("SuperAdmin already exists: superadmin");
+            userService.loadUserByUsername(superadminUsername);
+            System.out.println("SuperAdmin already exists: " + superadminUsername);
         } catch (Exception e) {
             SignupRequest request = new SignupRequest();
-            request.setUserName("superadmin");
-            request.setUserPassword("admin123");
-            request.setUserEmail("superadmin@company.com");
+            request.setUserName(superadminUsername);
+            request.setUserPassword(superadminPassword);
+            request.setUserEmail(superadminEmail);
 
             userService.createUser(request, List.of(RoleName.ROLE_SUPER_ADMIN));
-            System.out.println("Created SuperAdmin: superadmin / admin123");
+            System.out.println("Created SuperAdmin: " + superadminUsername + " / " + superadminPassword);
         }
     }
 
     private void createTestUsers() {
+        System.out.println("Creating test users...");
+
         createTestUser("admin", "admin123", "admin@test.com", List.of(RoleName.ROLE_ADMIN));
         createTestUser("moderator", "moderator123", "moderator@test.com", List.of(RoleName.ROLE_MODERATOR));
         createTestUser("user", "user123", "user@test.com", List.of(RoleName.ROLE_USER));
+
+        System.out.println("Test users created");
     }
 
     private void createTestUser(String username, String password, String email, List<RoleName> roles) {
@@ -66,6 +99,8 @@ public class DataInitializer implements CommandLineRunner {
 
     private void createTestContacts() {
         if (contactService.findAll().isEmpty()) {
+            System.out.println("Creating test contacts...");
+
             List<Contact> testContacts = Arrays.asList(
                     createContact("Иван", "Иванов", "Иванович", "Директор", "+7-999-111-22-33", "101"),
                     createContact("Петр", "Петров", "Петрович", "Менеджер", "+7-999-222-33-44", "102"),

@@ -81,15 +81,12 @@ public class SecurityConfigurator {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Разрешаем все origins для деплоя (можно ограничить позже)
-        configuration.setAllowedOrigins(List.of("*"));
-        // Или более безопасный вариант:
-        // configuration.setAllowedOriginPatterns(List.of("*"));
-
+        configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(false); // Если используете "*", должно быть false
+        configuration.setAllowCredentials(false); // false если origin = "*"
         configuration.setExposedHeaders(List.of("Authorization"));
+
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
