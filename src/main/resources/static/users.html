@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Телефонная книга - Управление пользователями</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Навигационная панель -->
+        <nav class="navbar">
+            <a href="phonebook.html" class="navbar-brand">
+                <i class="fas fa-address-book"></i> Телефонная книга
+            </a>
+            
+            <div class="navbar-user">
+                <div class="user-info">
+                    <i class="fas fa-user-circle"></i>
+                    <span id="currentUsername">Загрузка...</span>
+                    <span id="userRoleBadge" class="role-badge role-super-admin">SUPER ADMIN</span>
+                </div>
+                
+                <div class="navbar-actions">
+                    <button id="backToAdminBtn" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Назад к админ-панели
+                    </button>
+                    <button id="logoutBtn" class="btn btn-secondary">
+                        <i class="fas fa-sign-out-alt"></i> Выйти
+                    </button>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Основной контент -->
+        <div class="content-container">
+            <h2><i class="fas fa-users-cog"></i> Управление пользователями</h2>
+            <p class="form-note" style="margin-bottom: 20px;">
+                <i class="fas fa-info-circle"></i> 
+                Только пользователи с ролью SUPER_ADMIN имеют доступ к этой странице.
+            </p>
+            
+            <div class="controls-panel">
+                <div class="actions">
+                    <button id="addAdminBtn" class="btn btn-success">
+                        <i class="fas fa-user-plus"></i> Создать администратора
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Таблица пользователей -->
+            <div class="table-container">
+                <table id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Имя пользователя</th>
+                            <th>Email</th>
+                            <th>Статус</th>
+                            <th>Роли</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <!-- Пользователи будут загружены здесь -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Сообщение, если пользователей нет -->
+            <div id="noUsersMessage" style="display: none; text-align: center; padding: 40px;">
+                <i class="fas fa-users" style="font-size: 3rem; color: #ccc; margin-bottom: 15px;"></i>
+                <h3>Пользователи не найдены</h3>
+                <p>Произошла ошибка загрузки пользователей.</p>
+            </div>
+            
+            <!-- Индикатор загрузки -->
+            <div class="loading-spinner" id="loadingSpinner">
+                <div class="spinner"></div>
+                <p>Загрузка пользователей...</p>
+            </div>
+            
+            <!-- Сообщения -->
+            <div id="messageBox" class="message-box"></div>
+        </div>
+        
+        <!-- Модальное окно для создания администратора -->
+        <div class="modal" id="addAdminModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-user-plus"></i> Создание администратора</h3>
+                    <button class="close-btn" id="closeAddAdminModalBtn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="addAdminForm">
+                        <div class="form-row">
+                            <div class="form-col">
+                                <div class="form-group">
+                                    <label for="adminUsername"><i class="fas fa-user"></i> Имя пользователя *</label>
+                                    <input type="text" id="adminUsername" required placeholder="Введите имя пользователя">
+                                </div>
+                            </div>
+                            <div class="form-col">
+                                <div class="form-group">
+                                    <label for="adminEmail"><i class="fas fa-envelope"></i> Email *</label>
+                                    <input type="email" id="adminEmail" required placeholder="Введите email">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-col">
+                                <div class="form-group">
+                                    <label for="adminPassword"><i class="fas fa-lock"></i> Пароль *</label>
+                                    <input type="password" id="adminPassword" required placeholder="Введите пароль">
+                                </div>
+                            </div>
+                            <div class="form-col">
+                                <div class="form-group">
+                                    <label for="adminConfirmPassword"><i class="fas fa-lock"></i> Подтвердите пароль *</label>
+                                    <input type="password" id="adminConfirmPassword" required placeholder="Повторите пароль">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label><i class="fas fa-user-tag"></i> Роли администратора *</label>
+                            <div class="roles-checkbox">
+                                <div>
+                                    <input type="checkbox" id="roleAdmin" value="ROLE_ADMIN" checked>
+                                    <label for="roleAdmin">Администратор (полный доступ к контактам)</label>
+                                </div>
+                                <div>
+                                    <input type="checkbox" id="roleModerator" value="ROLE_MODERATOR">
+                                    <label for="roleModerator">Модератор (только просмотр и редактирование контактов)</label>
+                                </div>
+                                <div>
+                                    <input type="checkbox" id="roleUser" value="ROLE_USER" checked disabled>
+                                    <label for="roleUser">Пользователь (только просмотр контактов)</label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelAddAdminBtn">Отмена</button>
+                    <button type="button" class="btn btn-primary" id="saveAdminBtn">Создать</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Модальное окно для изменения ролей -->
+        <div class="modal" id="editRolesModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-user-tag"></i> Изменение ролей пользователя</h3>
+                    <button class="close-btn" id="closeEditRolesModalBtn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>Пользователь: <strong id="editRolesUsername"></strong></p>
+                    <div class="form-group">
+                        <label><i class="fas fa-user-tag"></i> Выберите роли *</label>
+                        <div class="roles-checkbox">
+                            <div>
+                                <input type="checkbox" id="editRoleAdmin" value="ROLE_ADMIN">
+                                <label for="editRoleAdmin">Администратор (полный доступ к контактам)</label>
+                            </div>
+                            <div>
+                                <input type="checkbox" id="editRoleModerator" value="ROLE_MODERATOR">
+                                <label for="editRoleModerator">Модератор (только просмотр и редактирование контактов)</label>
+                            </div>
+                            <div>
+                                <input type="checkbox" id="editRoleUser" value="ROLE_USER" checked disabled>
+                                <label for="editRoleUser">Пользователь (только просмотр контактов)</label>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="editRolesUserId">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelEditRolesBtn">Отмена</button>
+                    <button type="button" class="btn btn-primary" id="saveRolesBtn">Сохранить</button>
+                </div>
+            </div>
+        </div>
+        
+        <footer class="footer">
+            <p>Телефонная книга © 2025</p>
+        </footer>
+    </div>
+    
+    <script src="/js/auth.js"></script>
+    <script src="/js/users.js"></script>
+</body>
+</html>
