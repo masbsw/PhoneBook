@@ -7,4 +7,4 @@ RUN gradle clean build -x test --no-daemon
 
 EXPOSE 8080
 
-CMD ["java", "-jar", "build/libs/phonebook.jar", "--spring.profiles.active=render"]git add Dockerfile
+CMD ["java", "-jar", "build/libs/phonebook.jar", "--spring.profiles.active=render"]
