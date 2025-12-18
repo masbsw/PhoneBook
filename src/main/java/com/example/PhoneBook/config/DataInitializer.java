@@ -2,21 +2,30 @@ package com.example.PhoneBook.config;
 
 import com.example.PhoneBook.dto.SignupRequest;
 import com.example.PhoneBook.models.Contact;
+import com.example.PhoneBook.models.Role;
 import com.example.PhoneBook.models.RoleName;
+import com.example.PhoneBook.models.User;
 import com.example.PhoneBook.services.ContactService;
 import com.example.PhoneBook.services.UserService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import com.example.PhoneBook.repositories.RoleRepository;
+import com.example.PhoneBook.repositories.UserRepository;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
 
     private final UserService userService;
     private final ContactService contactService;
+    private final RoleRepository roleRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Value("${app.superadmin.username:superadmin}")
     private String superadminUsername;
@@ -33,17 +42,21 @@ public class DataInitializer implements CommandLineRunner {
     @Value("${app.create-test-contacts:true}")
     private boolean createTestContacts;
 
-    public DataInitializer(UserService userService, ContactService contactService) {
+    public DataInitializer(UserService userService, ContactService contactService, RoleRepository roleRepository, UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userService = userService;
         this.contactService = contactService;
+        this.roleRepository = roleRepository;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     public void run(String... args) throws Exception {
-        System.out.println("=== DataInitializer started ===");
         System.out.println("Superadmin username: " + superadminUsername);
         System.out.println("Create test users: " + createTestUsers);
         System.out.println("Create test contacts: " + createTestContacts);
+
+        createRoles();
 
         createSuperAdmin();
 
@@ -58,18 +71,62 @@ public class DataInitializer implements CommandLineRunner {
         System.out.println("=== DataInitializer finished ===");
     }
 
+    private void createRoles() {
+        System.out.println("Creating roles...");
+
+        for (RoleName roleName : RoleName.values()) {
+            if (!roleRepository.existsByRoleName(roleName)) {
+                Role role = new Role();
+                role.setRoleName(roleName);
+                role.setRoleDescription("System role: " + roleName);
+                roleRepository.save(role);
+                System.out.println("Created role: " + roleName);
+            }
+        }
+        System.out.println("Roles check completed");
+    }
+
     private void createSuperAdmin() {
+        System.out.println("Creating SuperAdmin...");
+
         try {
             userService.loadUserByUsername(superadminUsername);
             System.out.println("SuperAdmin already exists: " + superadminUsername);
+
+            Optional<User> superAdminOpt = userRepository.findByUserName(superadminUsername);
+            if (superAdminOpt.isPresent()) {
+                User superAdmin = superAdminOpt.get();
+                if (superAdmin.getUserRoles() == null || superAdmin.getUserRoles().isEmpty()) {
+                    System.out.println("SuperAdmin has no roles! Fixing...");
+
+                    List<Role> allRoles = roleRepository.findAll();
+                    superAdmin.setUserRoles(allRoles);
+                    userRepository.save(superAdmin);
+                    System.out.println("Added all roles to SuperAdmin");
+                }
+            }
         } catch (Exception e) {
+            System.out.println("Creating new SuperAdmin...");
+
             SignupRequest request = new SignupRequest();
             request.setUserName(superadminUsername);
             request.setUserPassword(superadminPassword);
             request.setUserEmail(superadminEmail);
 
-            userService.createUser(request, List.of(RoleName.ROLE_SUPER_ADMIN));
-            System.out.println("Created SuperAdmin: " + superadminUsername + " / " + superadminPassword);
+            List<Role> allRoles = roleRepository.findAll();
+            if (allRoles.isEmpty()) {
+                throw new RuntimeException("No roles found in database! Run createRoles() first!");
+            }
+
+            User user = new User();
+            user.setUserName(superadminUsername);
+            user.setUserPassword(passwordEncoder.encode(superadminPassword));
+            user.setUserEmail(superadminEmail);
+            user.setIsActive(true);
+            user.setUserRoles(allRoles);
+
+            userRepository.save(user);
+            System.out.println("Created SuperAdmin: " + superadminUsername + " with " + allRoles.size() + " roles");
         }
     }
 

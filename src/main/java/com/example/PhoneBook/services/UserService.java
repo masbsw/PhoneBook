@@ -62,6 +62,18 @@ public class UserService implements UserDetailsService {
         user.setIsActive(true);
 
         List<Role> userRoles = roleRepository.findByRoleNameIn(roles);
+
+        if (userRoles.isEmpty()) {
+            System.out.println("WARNING: No roles found for: " + roles);
+            Optional<Role> userRole = roleRepository.findByRoleName(RoleName.ROLE_USER);
+            if (userRole.isPresent()) {
+                userRoles = List.of(userRole.get());
+                System.out.println("Using default ROLE_USER for new user");
+            } else {
+                throw new RuntimeException("ROLE_USER not found in database!");
+            }
+        }
+
         user.setUserRoles(userRoles);
 
         return userRepository.save(user);
