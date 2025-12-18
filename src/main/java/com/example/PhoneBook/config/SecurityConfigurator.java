@@ -80,13 +80,15 @@ public class SecurityConfigurator {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(
-                "http://localhost:8080",
-                "http://127.0.0.1:8080"
-        ));
+
+        // Разрешаем все origins для деплоя (можно ограничить позже)
+        configuration.setAllowedOrigins(List.of("*"));
+        // Или более безопасный вариант:
+        // configuration.setAllowedOriginPatterns(List.of("*"));
+
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(false); // Если используете "*", должно быть false
         configuration.setExposedHeaders(List.of("Authorization"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

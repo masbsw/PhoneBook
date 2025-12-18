@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: phonebook-backend
+    runtime: java
+    plan: free
+    buildCommand: ./gradlew clean build
+    startCommand: java -Dserver.port=$PORT -jar build/libs/phonebook.jar --spring.profiles.active=render
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: phonebook-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SUPERADMIN_PASSWORD
+        generateValue: true
+
+databases:
+  - name: phonebook-db
+    plan: free
+    databaseName: phonebook
+    user: phonebook_user
