@@ -46,5 +46,16 @@ tasks.named('test') {
 
 bootJar {
 	archiveFileName = 'phonebook.jar'
-	launchScript()
+
+	// Убедитесь что файлы профилей включаются
+	duplicatesStrategy = DuplicatesStrategy.INCLUDE
+
+	manifest {
+		attributes(
+				'Start-Class': 'com.example.PhoneBook.PhoneBookApplication',
+				'Spring-Boot-Classes': 'BOOT-INF/classes/',
+				'Spring-Boot-Lib': 'BOOT-INF/lib/',
+				'Spring-Boot-Version': '3.5.7'
+		)
+	}
 }
