@@ -6,7 +6,10 @@ WORKDIR /app
 # 1. Копируем файлы для сборки
 COPY . .
 
-# 2. Собираем проект. Убедитесь, что используется wrapper (gradlew)
+# 1.1. ДАВАЙТЕ ПРАВА НА ВЫПОЛНЕНИЕ gradlew!
+RUN chmod +x gradlew
+
+# 2. Собираем проект
 RUN ./gradlew clean build -x test --no-daemon
 
 # 3. Финальный образ (используем JRE для запуска)
