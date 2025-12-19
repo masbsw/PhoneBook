@@ -215,9 +215,13 @@ async function loadDepartments() {
         });
 
         if (response.ok) {
-            return await response.json();
+            const departments = await response.json();
+            console.log('Loaded departments:', departments.length);
+            return departments;
+        } else {
+            console.error('Failed to load departments:', response.status);
+            return [];
         }
-        return [];
     } catch (error) {
         console.error('Error loading departments:', error);
         return [];
@@ -633,4 +637,4 @@ function showMessage(message, type = 'info') {
 setTimeout(() => {
     console.log('Автоматическое скрытие загрузки через 5 секунд');
     showLoading(false);
-}, 5000);
+}, 5000);3

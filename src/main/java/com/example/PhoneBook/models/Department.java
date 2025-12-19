@@ -2,9 +2,13 @@ package com.example.PhoneBook.models;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.List;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "departments")
 public class Department {
@@ -20,6 +24,4 @@ public class Department {
     @Column(name = "description")
     private String description;
 
-    @OneToMany(mappedBy = "department", fetch = FetchType.LAZY)
-    private List<Contact> contacts;
 }

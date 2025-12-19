@@ -190,9 +190,13 @@ async function loadDepartments() {
         });
 
         if (response.ok) {
-            return await response.json();
+            const departments = await response.json();
+            console.log('Loaded departments:', departments.length);
+            return departments;
+        } else {
+            console.error('Failed to load departments:', response.status);
+            return [];
         }
-        return [];
     } catch (error) {
         console.error('Error loading departments:', error);
         return [];

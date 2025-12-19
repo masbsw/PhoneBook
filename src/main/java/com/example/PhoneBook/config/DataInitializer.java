@@ -134,13 +134,29 @@ public class DataInitializer implements CommandLineRunner {
 
             List<Department> allDepartments = departmentRepository.findAll();
 
+            if (allDepartments.isEmpty()) {
+                System.out.println("Warning: No departments found!");
+                return;
+            }
+
+            Department adminDept = allDepartments.stream()
+                    .filter(d -> d.getDepartmentName().equals("Администрация"))
+                    .findFirst().orElse(allDepartments.get(0));
+
+            Department salesDept = allDepartments.stream()
+                    .filter(d -> d.getDepartmentName().equals("Продажи"))
+                    .findFirst().orElse(allDepartments.get(0));
+
+            Department accountingDept = allDepartments.stream()
+                    .filter(d -> d.getDepartmentName().equals("Бухгалтерия"))
+                    .findFirst().orElse(allDepartments.get(0));
+
             List<Contact> testContacts = Arrays.asList(
-                    createContact("Иван", "Иванов", "Иванович", "Директор", "+7-999-111-22-33", "101",
-                            allDepartments.stream().filter(d -> d.getDepartmentName().equals("Департамент главного энергетика")).findFirst().orElse(null)),
-                    createContact("Петр", "Петров", "Петрович", "Менеджер", "+7-999-222-33-44", "102",
-                            allDepartments.stream().filter(d -> d.getDepartmentName().equals("Департамент IT")).findFirst().orElse(null)),
-                    createContact("Мария", "Сидорова", "Ивановна", "Бухгалтер", "+7-999-333-44-55", "103",
-                            allDepartments.stream().filter(d -> d.getDepartmentName().equals("Бухгалтерия")).findFirst().orElse(null))
+                    createContact("Иван", "Иванов", "Иванович", "Директор", "+7-999-111-22-33", "101", adminDept),
+                    createContact("Петр", "Петров", "Петрович", "Менеджер", "+7-999-222-33-44", "102", salesDept),
+                    createContact("Мария", "Сидорова", "Ивановна", "Бухгалтер", "+7-999-333-44-55", "103", accountingDept),
+                    createContact("Анна", "Смирнова", "Петровна", "Аналитик", "+7-999-444-55-66", "104", adminDept),
+                    createContact("Сергей", "Козлов", "Сергеевич", "Разработчик", "+7-999-555-66-77", "105", null) // без отдела
             );
 
             testContacts.forEach(contactService::save);

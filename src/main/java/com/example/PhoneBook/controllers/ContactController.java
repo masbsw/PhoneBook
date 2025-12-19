@@ -7,7 +7,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/contacts")
@@ -25,6 +28,26 @@ public class ContactController {
     @PreAuthorize("hasRole('USER') or hasRole('MODERATOR') or hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
     public List<Contact> getContactsByDepartment(@PathVariable Long departmentId) {
         return contactService.findByDepartmentId(departmentId);
+    }
+
+    @GetMapping("/department/{departmentId}/simple")
+    @PreAuthorize("hasRole('USER') or hasRole('MODERATOR') or hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
+    public List<Map<String, Object>> getContactsByDepartmentSimple(@PathVariable Long departmentId) {
+        List<Contact> contacts = contactService.findByDepartmentId(departmentId);
+
+        return contacts.stream()
+                .map(contact -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("contactId", contact.getContactId());
+                    map.put("firstName", contact.getContactFirstName());
+                    map.put("lastName", contact.getContactLastName());
+                    map.put("patronymic", contact.getContactPatronymic());
+                    map.put("position", contact.getContactPosition());
+                    map.put("phone", contact.getContactPhoneNumber());
+                    map.put("internal", contact.getContactInternalNumber());
+                    return map;
+                })
+                .collect(Collectors.toList());
     }
 
     @GetMapping("/search")
