@@ -41,7 +41,6 @@ public class TokenFilter extends OncePerRequestFilter {
 
         String path = request.getServletPath();
 
-        // Пропускаем статические файлы и публичные эндпоинты без проверки токена
         if (shouldSkipAuthentication(path)) {
             filterChain.doFilter(request, response);
             return;
@@ -69,14 +68,12 @@ public class TokenFilter extends OncePerRequestFilter {
             return;
         } catch (Exception e) {
             logger.error("Cannot set user authentication: {}");
-            // Не очищаем SecurityContext для других ошибок, чтобы не прерывать цепочку
         }
 
         filterChain.doFilter(request, response);
     }
 
     private boolean shouldSkipAuthentication(String path) {
-        // Публичные пути, не требующие аутентификации
         return path.startsWith("/js/") ||
                 path.equals("/") ||
                 path.equals("/index.html") ||
@@ -101,7 +98,6 @@ public class TokenFilter extends OncePerRequestFilter {
 
     private void authenticateUser(HttpServletRequest request, String jwt, String username) {
         try {
-            // Проверяем кэш пользователей
             UserDetails userDetails = userCache.get(username);
 
             if (userDetails == null) {
@@ -109,10 +105,8 @@ public class TokenFilter extends OncePerRequestFilter {
                 userCache.put(username, userDetails);
             }
 
-            // Получаем роли из токена
             List<String> rolesFromToken = jwtCore.getRolesFromJwt(jwt);
 
-            // Создаем authorities из ролей в токене
             List<GrantedAuthority> authorities = rolesFromToken.stream()
                     .map(SimpleGrantedAuthority::new)
                     .collect(Collectors.toList());
@@ -127,18 +121,15 @@ public class TokenFilter extends OncePerRequestFilter {
 
         } catch (Exception e) {
             logger.error("Failed to authenticate user {}: {}");
-            // Удаляем из кэша при ошибке
             userCache.remove(username);
             throw e;
         }
     }
 
-    // Метод для очистки кэша (может быть полезен)
     public void clearUserCache() {
         userCache.clear();
     }
 
-    // Метод для удаления конкретного пользователя из кэша
     public void removeUserFromCache(String username) {
         userCache.remove(username);
     }

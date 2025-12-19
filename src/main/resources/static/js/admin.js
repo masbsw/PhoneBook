@@ -12,12 +12,10 @@ let contactModal;
 let deleteModal;
 let currentContactId = null;
 
-// Таймер для отложенного поиска
 let searchTimeout;
 
-// Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
-    // Получаем элементы DOM
+
     contactsTableBody = document.getElementById('contactsTableBody');
     searchInput = document.getElementById('searchInput');
     addContactBtn = document.getElementById('addContactBtn');
@@ -27,14 +25,11 @@ document.addEventListener('DOMContentLoaded', function() {
     currentUsername = document.getElementById('currentUsername');
     userRoleBadge = document.getElementById('userRoleBadge');
     adminCapabilities = document.getElementById('adminCapabilities');
-    
-    // Проверяем авторизацию и права доступа
+
     checkAuthAndLoad();
-    
-    // Инициализируем модальные окна
+
     initModals();
-    
-    // Назначаем обработчики событий
+
     if (searchInput) {
         searchInput.addEventListener('input', handleSearch);
     }
@@ -101,9 +96,7 @@ function isAdminUser(username) {
     return username === 'superadmin' || username === 'admin' || username === 'moderator';
 }
 
-// Настройка интерфейса в зависимости от роли пользователя
 function setupUserInterface(username) {
-    // Определяем роль (в реальном приложении это должно приходить с бэкенда)
     let role = 'ROLE_USER';
     let roleDisplay = 'Пользователь';
     let roleClass = 'role-user';

@@ -25,15 +25,14 @@ public class JwtCore {
     public String generateToken(Authentication authentication) {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
-        // Получаем роли пользователя
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(item -> item.getAuthority())
                 .collect(Collectors.toList());
 
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
-                .claim("roles", roles) // Добавляем роли в токен
-                .claim("userId", userDetails.getUserId()) // Используйте getUserId() вместо getId()
+                .claim("roles", roles)
+                .claim("userId", userDetails.getUserId())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date((new Date().getTime() + lifetime)))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
@@ -61,7 +60,6 @@ public class JwtCore {
         }
     }
 
-    // Добавьте метод для получения ролей из токена
     public List<String> getRolesFromJwt(String token) {
         try {
             Claims claims = Jwts.parser()
@@ -76,7 +74,6 @@ public class JwtCore {
         }
     }
 
-    // Добавьте метод для получения userId из токена
     public Long getUserIdFromJwt(String token) {
         try {
             Claims claims = Jwts.parser()

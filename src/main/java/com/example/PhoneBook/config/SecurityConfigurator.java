@@ -50,7 +50,6 @@ public class SecurityConfigurator {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(authorize -> authorize
-                        // Разрешаем доступ к статическим ресурсам без аутентификации
                         .requestMatchers(
                                 "/",
                                 "/index.html",
@@ -64,11 +63,8 @@ public class SecurityConfigurator {
                                 "/styles.css",
                                 "/js/**"
                         ).permitAll()
-                        // Разрешаем доступ к аутентификации
                         .requestMatchers("/auth/**").permitAll()
-                        // Разрешаем OPTIONS запросы для CORS
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // API endpoint'ы
                         .requestMatchers("/api/admin/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/contacts/**").hasAnyRole("USER", "MODERATOR", "ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/secured/user").fullyAuthenticated()
@@ -83,16 +79,13 @@ public class SecurityConfigurator {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Для Render
         configuration.setAllowedOrigins(List.of(
                 "https://phonebook-app-hwof.onrender.com",
-                "https://phonebook-app-hwof.onrender.com/", // с и без слеша
+                "https://phonebook-app-hwof.onrender.com/",
                 "http://localhost:8080",
                 "http://localhost:3000"
         ));
 
-        // ИЛИ разрешите все origins для тестирования:
-        // configuration.setAllowedOrigins(List.of("*"));
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
