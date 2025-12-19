@@ -2,30 +2,24 @@ package com.example.PhoneBook.config;
 
 import com.example.PhoneBook.dto.SignupRequest;
 import com.example.PhoneBook.models.Contact;
-import com.example.PhoneBook.models.Role;
+import com.example.PhoneBook.models.Department;
 import com.example.PhoneBook.models.RoleName;
-import com.example.PhoneBook.models.User;
+import com.example.PhoneBook.repositories.DepartmentRepository;
 import com.example.PhoneBook.services.ContactService;
 import com.example.PhoneBook.services.UserService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-import com.example.PhoneBook.repositories.RoleRepository;
-import com.example.PhoneBook.repositories.UserRepository;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
 
     private final UserService userService;
     private final ContactService contactService;
-    private final RoleRepository roleRepository;
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final DepartmentRepository departmentRepository;
 
     @Value("${app.superadmin.username:superadmin}")
     private String superadminUsername;
@@ -42,21 +36,18 @@ public class DataInitializer implements CommandLineRunner {
     @Value("${app.create-test-contacts:true}")
     private boolean createTestContacts;
 
-    public DataInitializer(UserService userService, ContactService contactService, RoleRepository roleRepository, UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public DataInitializer(UserService userService, ContactService contactService,
+                           DepartmentRepository departmentRepository) {
         this.userService = userService;
         this.contactService = contactService;
-        this.roleRepository = roleRepository;
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
+        this.departmentRepository = departmentRepository;
     }
 
     @Override
     public void run(String... args) throws Exception {
-        System.out.println("Superadmin username: " + superadminUsername);
-        System.out.println("Create test users: " + createTestUsers);
-        System.out.println("Create test contacts: " + createTestContacts);
+        System.out.println("=== DataInitializer started ===");
 
-        createRoles();
+        createTestDepartments();
 
         createSuperAdmin();
 
@@ -71,62 +62,45 @@ public class DataInitializer implements CommandLineRunner {
         System.out.println("=== DataInitializer finished ===");
     }
 
-    private void createRoles() {
-        System.out.println("Creating roles...");
+    private void createTestDepartments() {
+        System.out.println("Creating test departments...");
 
-        for (RoleName roleName : RoleName.values()) {
-            if (!roleRepository.existsByRoleName(roleName)) {
-                Role role = new Role();
-                role.setRoleName(roleName);
-                role.setRoleDescription("System role: " + roleName);
-                roleRepository.save(role);
-                System.out.println("Created role: " + roleName);
+        List<String> departments = Arrays.asList(
+                "Бухгалтерия",
+                "Департамент экономики и финансов",
+                "Департамент IT",
+                "Технологический департамент",
+                "Правовой департамент",
+                "Производственно-технический департамент",
+                "Департамент главного энергетика"
+
+        );
+
+        for (String deptName : departments) {
+            if (!departmentRepository.existsByDepartmentName(deptName)) {
+                Department dept = new Department();
+                dept.setDepartmentName(deptName);
+                dept.setDescription("Тестовый отдел: " + deptName);
+                departmentRepository.save(dept);
+                System.out.println("Created department: " + deptName);
             }
         }
-        System.out.println("Roles check completed");
+
+        System.out.println("Test departments created");
     }
 
     private void createSuperAdmin() {
-        System.out.println("Creating SuperAdmin...");
-
         try {
             userService.loadUserByUsername(superadminUsername);
             System.out.println("SuperAdmin already exists: " + superadminUsername);
-
-            Optional<User> superAdminOpt = userRepository.findByUserName(superadminUsername);
-            if (superAdminOpt.isPresent()) {
-                User superAdmin = superAdminOpt.get();
-                if (superAdmin.getUserRoles() == null || superAdmin.getUserRoles().isEmpty()) {
-                    System.out.println("SuperAdmin has no roles! Fixing...");
-
-                    List<Role> allRoles = roleRepository.findAll();
-                    superAdmin.setUserRoles(allRoles);
-                    userRepository.save(superAdmin);
-                    System.out.println("Added all roles to SuperAdmin");
-                }
-            }
         } catch (Exception e) {
-            System.out.println("Creating new SuperAdmin...");
-
             SignupRequest request = new SignupRequest();
             request.setUserName(superadminUsername);
             request.setUserPassword(superadminPassword);
             request.setUserEmail(superadminEmail);
 
-            List<Role> allRoles = roleRepository.findAll();
-            if (allRoles.isEmpty()) {
-                throw new RuntimeException("No roles found in database! Run createRoles() first!");
-            }
-
-            User user = new User();
-            user.setUserName(superadminUsername);
-            user.setUserPassword(passwordEncoder.encode(superadminPassword));
-            user.setUserEmail(superadminEmail);
-            user.setIsActive(true);
-            user.setUserRoles(allRoles);
-
-            userRepository.save(user);
-            System.out.println("Created SuperAdmin: " + superadminUsername + " with " + allRoles.size() + " roles");
+            userService.createUser(request, List.of(RoleName.ROLE_SUPER_ADMIN));
+            System.out.println("Created SuperAdmin: " + superadminUsername + " / " + superadminPassword);
         }
     }
 
@@ -158,10 +132,15 @@ public class DataInitializer implements CommandLineRunner {
         if (contactService.findAll().isEmpty()) {
             System.out.println("Creating test contacts...");
 
+            List<Department> allDepartments = departmentRepository.findAll();
+
             List<Contact> testContacts = Arrays.asList(
-                    createContact("Иван", "Иванов", "Иванович", "Директор", "+7-999-111-22-33", "101"),
-                    createContact("Петр", "Петров", "Петрович", "Менеджер", "+7-999-222-33-44", "102"),
-                    createContact("Мария", "Сидорова", "Ивановна", "Бухгалтер", "+7-999-333-44-55", "103")
+                    createContact("Иван", "Иванов", "Иванович", "Директор", "+7-999-111-22-33", "101",
+                            allDepartments.stream().filter(d -> d.getDepartmentName().equals("Департамент главного энергетика")).findFirst().orElse(null)),
+                    createContact("Петр", "Петров", "Петрович", "Менеджер", "+7-999-222-33-44", "102",
+                            allDepartments.stream().filter(d -> d.getDepartmentName().equals("Департамент IT")).findFirst().orElse(null)),
+                    createContact("Мария", "Сидорова", "Ивановна", "Бухгалтер", "+7-999-333-44-55", "103",
+                            allDepartments.stream().filter(d -> d.getDepartmentName().equals("Бухгалтерия")).findFirst().orElse(null))
             );
 
             testContacts.forEach(contactService::save);
@@ -172,7 +151,7 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private Contact createContact(String firstName, String lastName, String patronymic,
-                                  String position, String phone, String internal) {
+                                  String position, String phone, String internal, Department department) {
         Contact contact = new Contact();
         contact.setContactFirstName(firstName);
         contact.setContactLastName(lastName);
@@ -180,6 +159,7 @@ public class DataInitializer implements CommandLineRunner {
         contact.setContactPosition(position);
         contact.setContactPhoneNumber(phone);
         contact.setContactInternalNumber(internal);
+        contact.setDepartment(department);
         return contact;
     }
 }

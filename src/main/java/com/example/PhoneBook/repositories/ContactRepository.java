@@ -1,6 +1,5 @@
 package com.example.PhoneBook.repositories;
 
-
 import com.example.PhoneBook.models.Contact;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -15,6 +14,9 @@ public interface ContactRepository extends JpaRepository<Contact, Long> {
             "LOWER(c.contactFirstName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
             "LOWER(c.contactLastName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
             "LOWER(c.contactPatronymic) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-            "LOWER(c.contactPosition) LIKE LOWER(CONCAT('%', :query, '%'))")
+            "LOWER(c.contactPosition) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+            "(c.department IS NOT NULL AND LOWER(c.department.departmentName) LIKE LOWER(CONCAT('%', :query, '%')))")
     List<Contact> searchContacts(@Param("query") String query);
+
+    List<Contact> findByDepartmentDepartmentId(Long departmentId);
 }

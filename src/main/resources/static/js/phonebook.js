@@ -8,6 +8,7 @@ let currentUsername;
 let userRoleBadge;
 let contactModal;
 let deleteModal;
+let departmentFilter;
 let currentContactId = null;
 
 // Таймер для отложенного поиска
@@ -25,6 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
     logoutBtn = document.getElementById('logoutBtn');
     currentUsername = document.getElementById('currentUsername');
     userRoleBadge = document.getElementById('userRoleBadge');
+    departmentFilter = document.getElementById('departmentFilter');
 
     // Сразу скрываем загрузку (на всякий случай)
     showLoading(false);
@@ -38,6 +40,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Назначаем обработчики событий
     if (searchInput) {
         searchInput.addEventListener('input', handleSearch);
+    }
+
+    if (departmentFilter) {
+        departmentFilter.addEventListener('change', handleDepartmentFilter);
     }
 
     if (addContactBtn) {
@@ -150,6 +156,9 @@ async function checkAuthAndLoad() {
                 currentUsername.textContent = currentUser;
             }
 
+            // Загружаем отделы для фильтра
+            await initDepartmentFilter();
+
             // Настраиваем интерфейс по ролям
             await setupUserInterface();
 
@@ -167,6 +176,60 @@ async function checkAuthAndLoad() {
         localStorage.removeItem('jwtToken');
         localStorage.removeItem('currentUser');
         window.location.href = '/';
+    }
+}
+
+// Загрузка отделов
+async function loadDepartments() {
+    try {
+        const token = localStorage.getItem('jwtToken');
+        const response = await fetch('/api/departments', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            return await response.json();
+        }
+        return [];
+    } catch (error) {
+        console.error('Error loading departments:', error);
+        return [];
+    }
+}
+
+// Инициализация фильтра отделов
+async function initDepartmentFilter() {
+    const departments = await loadDepartments();
+    const filter = document.getElementById('departmentFilter');
+
+    if (filter) {
+        filter.innerHTML = '<option value="">Все отделы</option>';
+
+        departments.forEach(dept => {
+            const option = document.createElement('option');
+            option.value = dept.departmentId;
+            option.textContent = dept.departmentName;
+            filter.appendChild(option);
+        });
+    }
+}
+
+// Инициализация select отделов в модальном окне
+async function initDepartmentSelect() {
+    const departments = await loadDepartments();
+    const select = document.getElementById('contactDepartment');
+
+    if (select) {
+        select.innerHTML = '<option value="">Выберите отдел</option>';
+
+        departments.forEach(dept => {
+            const option = document.createElement('option');
+            option.value = dept.departmentId;
+            option.textContent = dept.departmentName;
+            select.appendChild(option);
+        });
     }
 }
 
@@ -243,8 +306,8 @@ async function setupUserInterface() {
 }
 
 // Загрузка контактов
-async function loadContacts(searchQuery = '') {
-    console.log('loadContacts вызвана, поиск:', searchQuery);
+async function loadContacts(searchQuery = '', departmentId = '') {
+    console.log('loadContacts вызвана, поиск:', searchQuery, 'отдел:', departmentId);
 
     // Показываем загрузку
     showLoading(true);
@@ -252,9 +315,17 @@ async function loadContacts(searchQuery = '') {
     try {
         const token = localStorage.getItem('jwtToken');
         let url = '/api/contacts';
+        let params = new URLSearchParams();
 
         if (searchQuery) {
-            url += `/search?query=${encodeURIComponent(searchQuery)}`;
+            params.append('query', searchQuery);
+            url = '/api/contacts/search';
+        } else if (departmentId) {
+            url = `/api/contacts/department/${departmentId}`;
+        }
+
+        if (searchQuery && url === '/api/contacts/search') {
+            url += '?' + params.toString();
         }
 
         console.log('Запрос к:', url);
@@ -271,9 +342,7 @@ async function loadContacts(searchQuery = '') {
         if (response.ok) {
             const contacts = await response.json();
             console.log('Получено контактов:', contacts.length);
-
             renderContacts(contacts);
-
         } else {
             console.error('Ошибка загрузки:', response.status);
             showMessage('Ошибка загрузки контактов', 'error');
@@ -353,12 +422,16 @@ function renderContacts(contacts) {
             }
         }
 
+        // Получаем название отдела
+        const departmentName = contact.department ? contact.department.departmentName : 'Не указан';
+
         row.innerHTML = `
             <td>${contact.contactId || ''}</td>
             <td>${contact.contactLastName || ''}</td>
             <td>${contact.contactFirstName || ''}</td>
             <td>${contact.contactPatronymic || ''}</td>
             <td>${contact.contactPosition || ''}</td>
+            <td>${departmentName}</td>
             <td>${contact.contactPhoneNumber || ''}</td>
             <td>${contact.contactInternalNumber || ''}</td>
             ${actionsCell}
@@ -394,9 +467,6 @@ function getCurrentUserRoles() {
     }
 }
 
-
-
-
 // Редактирование контакта
 function editContact(id) {
     console.log('Редактирование контакта ID:', id);
@@ -419,6 +489,9 @@ async function loadContactForEdit(id) {
             const contact = await response.json();
             console.log('Контакт для редактирования:', contact);
 
+            // Загружаем отделы в select
+            await initDepartmentSelect();
+
             // Заполняем форму
             document.getElementById('contactFirstName').value = contact.contactFirstName || '';
             document.getElementById('contactLastName').value = contact.contactLastName || '';
@@ -427,6 +500,13 @@ async function loadContactForEdit(id) {
             document.getElementById('contactPhoneNumber').value = contact.contactPhoneNumber || '';
             document.getElementById('contactInternalNumber').value = contact.contactInternalNumber || '';
             document.getElementById('contactId').value = contact.contactId || '';
+
+            // Устанавливаем отдел если есть
+            if (contact.department && contact.department.departmentId) {
+                document.getElementById('contactDepartment').value = contact.department.departmentId;
+            } else {
+                document.getElementById('contactDepartment').value = '';
+            }
 
             // Показываем модальное окно
             document.getElementById('modalTitle').textContent = 'Редактировать контакт';
@@ -464,6 +544,8 @@ function deleteContact(id) {
 async function saveContact() {
     try {
         const token = localStorage.getItem('jwtToken');
+        const departmentId = document.getElementById('contactDepartment').value;
+
         const contactData = {
             contactFirstName: document.getElementById('contactFirstName').value.trim(),
             contactLastName: document.getElementById('contactLastName').value.trim(),
@@ -472,6 +554,13 @@ async function saveContact() {
             contactPhoneNumber: document.getElementById('contactPhoneNumber').value.trim(),
             contactInternalNumber: document.getElementById('contactInternalNumber').value.trim() || null
         };
+
+        // Добавляем отдел если выбран
+        if (departmentId) {
+            contactData.department = {
+                departmentId: parseInt(departmentId)
+            };
+        }
 
         // Валидация
         if (!contactData.contactFirstName || !contactData.contactLastName ||
@@ -502,7 +591,12 @@ async function saveContact() {
             console.log('Контакт сохранен:', savedContact);
 
             contactModal.style.display = 'none';
-            loadContacts();
+
+            // Перезагружаем контакты с учетом текущего фильтра
+            const searchQuery = searchInput ? searchInput.value.trim() : '';
+            const departmentId = departmentFilter ? departmentFilter.value : '';
+            loadContacts(searchQuery, departmentId);
+
             showMessage('Контакт сохранен успешно', 'success');
         } else {
             const errorText = await response.text();
@@ -528,7 +622,12 @@ async function confirmDeleteContact() {
 
         if (response.ok) {
             deleteModal.style.display = 'none';
-            loadContacts();
+
+            // Перезагружаем контакты с учетом текущего фильтра
+            const searchQuery = searchInput ? searchInput.value.trim() : '';
+            const departmentId = departmentFilter ? departmentFilter.value : '';
+            loadContacts(searchQuery, departmentId);
+
             showMessage('Контакт удален успешно', 'success');
         } else {
             const errorText = await response.text();
@@ -547,17 +646,30 @@ function handleSearch(event) {
     searchTimeout = setTimeout(() => {
         const query = event.target.value.trim();
         console.log('Поиск контактов:', query);
-        loadContacts(query);
+        const departmentId = departmentFilter ? departmentFilter.value : '';
+        loadContacts(query, departmentId);
     }, 300);
 }
 
+// Обработка фильтра по отделам
+function handleDepartmentFilter() {
+    const departmentId = this.value;
+    const searchQuery = searchInput ? searchInput.value.trim() : '';
+    console.log('Фильтр по отделу:', departmentId);
+    loadContacts(searchQuery, departmentId);
+}
+
 // Показать модальное окно добавления контакта
-function showAddContactModal() {
+async function showAddContactModal() {
     console.log('Показать модальное окно добавления');
     currentContactId = null;
     if (contactModal) {
+        // Загружаем отделы
+        await initDepartmentSelect();
+
         // Сбросить форму
         document.getElementById('contactForm').reset();
+        document.getElementById('contactDepartment').value = '';
         document.getElementById('modalTitle').textContent = 'Добавить контакт';
         contactModal.style.display = 'block';
     }

@@ -21,6 +21,12 @@ public class ContactController {
         return contactService.findAll();
     }
 
+    @GetMapping("/department/{departmentId}")
+    @PreAuthorize("hasRole('USER') or hasRole('MODERATOR') or hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
+    public List<Contact> getContactsByDepartment(@PathVariable Long departmentId) {
+        return contactService.findByDepartmentId(departmentId);
+    }
+
     @GetMapping("/search")
     @PreAuthorize("hasRole('USER') or hasRole('MODERATOR') or hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
     public List<Contact> searchContacts(@RequestParam String query) {

@@ -1,7 +1,9 @@
 package com.example.PhoneBook.services;
 
 import com.example.PhoneBook.models.Contact;
+import com.example.PhoneBook.models.Department;
 import com.example.PhoneBook.repositories.ContactRepository;
+import com.example.PhoneBook.repositories.DepartmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +18,9 @@ public class ContactService {
     @Autowired
     private ContactRepository contactRepository;
 
+    @Autowired
+    private DepartmentRepository departmentRepository;
+
     public List<Contact> findAll() {
         return contactRepository.findAll();
     }
@@ -29,6 +34,11 @@ public class ContactService {
     }
 
     public Contact save(Contact contact) {
+        if (contact.getDepartment() != null && contact.getDepartment().getDepartmentId() != null) {
+            Department dept = departmentRepository.findById(contact.getDepartment().getDepartmentId())
+                    .orElse(null);
+            contact.setDepartment(dept);
+        }
         return contactRepository.save(contact);
     }
 
@@ -43,6 +53,14 @@ public class ContactService {
         contact.setContactPhoneNumber(contactDetails.getContactPhoneNumber());
         contact.setContactInternalNumber(contactDetails.getContactInternalNumber());
 
+        if (contactDetails.getDepartment() != null && contactDetails.getDepartment().getDepartmentId() != null) {
+            Department dept = departmentRepository.findById(contactDetails.getDepartment().getDepartmentId())
+                    .orElse(null);
+            contact.setDepartment(dept);
+        } else {
+            contact.setDepartment(null);
+        }
+
         return contactRepository.save(contact);
     }
 
@@ -55,5 +73,9 @@ public class ContactService {
 
     public boolean existsById(Long id) {
         return contactRepository.existsById(id);
+    }
+
+    public List<Contact> findByDepartmentId(Long departmentId) {
+        return contactRepository.findByDepartmentDepartmentId(departmentId);
     }
 }

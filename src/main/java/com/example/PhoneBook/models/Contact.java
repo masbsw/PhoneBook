@@ -1,6 +1,5 @@
 package com.example.PhoneBook.models;
 
-
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -35,6 +34,10 @@ public class Contact {
     @Column(name = "contact_internal_number", nullable = false)
     private String contactInternalNumber;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "department_id")
+    private Department department;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;
@@ -51,7 +54,6 @@ public class Contact {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-
     public String getFullName() {
         if (contactPatronymic != null && !contactPatronymic.isEmpty()) {
             return contactLastName + " " + contactFirstName + " " + contactPatronymic;
@@ -59,6 +61,4 @@ public class Contact {
             return contactLastName + " " + contactFirstName;
         }
     }
-
-
 }

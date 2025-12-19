@@ -35,10 +35,20 @@
 
     <!-- Основной контент -->
     <div class="content-container">
+        <!-- Панель управления -->
         <div class="controls-panel">
             <div class="search-box">
                 <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Поиск по ФИО, должности, номеру телефона...">
+                <input type="text" id="searchInput" placeholder="Поиск по ФИО, должности, отделу...">
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="departmentFilter"><i class="fas fa-filter"></i> Фильтр по отделу:</label>
+                    <select id="departmentFilter" class="form-control">
+                        <option value="">Все отделы</option>
+                    </select>
+                </div>
             </div>
 
             <div class="actions">
@@ -46,6 +56,12 @@
                     <i class="fas fa-plus"></i> Добавить контакт
                 </button>
             </div>
+        </div>
+
+        <!-- Информация для обычных пользователей -->
+        <div id="userInfoMessage" style="display: none; margin-bottom: 20px;" class="form-note">
+            <i class="fas fa-info-circle"></i>
+            Вы можете только просматривать контакты. Для редактирования обратитесь к администратору.
         </div>
 
         <!-- Таблица контактов -->
@@ -58,6 +74,7 @@
                     <th>Имя</th>
                     <th>Отчество</th>
                     <th>Должность</th>
+                    <th>Отдел</th>
                     <th>Номер телефона</th>
                     <th>Внутренний номер</th>
                     <th>Действия</th>
@@ -128,15 +145,29 @@
                     <div class="form-row">
                         <div class="form-col">
                             <div class="form-group">
+                                <label for="contactDepartment"><i class="fas fa-building"></i> Отдел</label>
+                                <select id="contactDepartment">
+                                    <option value="">Выберите отдел</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-col">
+                            <div class="form-group">
                                 <label for="contactPhoneNumber"><i class="fas fa-phone"></i> Номер телефона *</label>
                                 <input type="tel" id="contactPhoneNumber" required placeholder="+7-999-123-45-67">
                             </div>
                         </div>
+                    </div>
+
+                    <div class="form-row">
                         <div class="form-col">
                             <div class="form-group">
                                 <label for="contactInternalNumber"><i class="fas fa-hashtag"></i> Внутренний номер</label>
                                 <input type="text" id="contactInternalNumber">
                             </div>
+                        </div>
+                        <div class="form-col">
+                            <!-- Пустая колонка для выравнивания -->
                         </div>
                     </div>
 

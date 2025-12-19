@@ -10,11 +10,13 @@ let userRoleBadge;
 let adminCapabilities;
 let contactModal;
 let deleteModal;
+let departmentFilter;
 let currentContactId = null;
 
 let searchTimeout;
 
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('admin.js: DOM загружен');
 
     contactsTableBody = document.getElementById('contactsTableBody');
     searchInput = document.getElementById('searchInput');
@@ -25,6 +27,7 @@ document.addEventListener('DOMContentLoaded', function() {
     currentUsername = document.getElementById('currentUsername');
     userRoleBadge = document.getElementById('userRoleBadge');
     adminCapabilities = document.getElementById('adminCapabilities');
+    departmentFilter = document.getElementById('departmentFilter');
 
     checkAuthAndLoad();
 
@@ -33,23 +36,27 @@ document.addEventListener('DOMContentLoaded', function() {
     if (searchInput) {
         searchInput.addEventListener('input', handleSearch);
     }
-    
+
+    if (departmentFilter) {
+        departmentFilter.addEventListener('change', handleDepartmentFilter);
+    }
+
     if (addContactBtn) {
         addContactBtn.addEventListener('click', showAddContactModal);
     }
-    
+
     if (usersManagementBtn) {
         usersManagementBtn.addEventListener('click', () => {
             window.location.href = 'users.html';
         });
     }
-    
+
     if (backToPhonebookBtn) {
         backToPhonebookBtn.addEventListener('click', () => {
             window.location.href = 'phonebook.html';
         });
     }
-    
+
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             if (typeof auth !== 'undefined' && auth.logout) {
@@ -67,28 +74,27 @@ document.addEventListener('DOMContentLoaded', function() {
 function checkAuthAndLoad() {
     const token = localStorage.getItem('jwtToken');
     const username = localStorage.getItem('currentUser');
-    
+
     if (!token || !username) {
-        // Если нет токена или пользователя, перенаправляем на страницу входа
         window.location.href = '/index.html';
         return;
     }
-    
+
     // Проверяем, есть ли у пользователя права админа
     if (!isAdminUser(username)) {
-        // Если нет прав админа, перенаправляем на обычную телефонную книгу
         window.location.href = 'phonebook.html';
         return;
     }
-    
-    // Отображаем имя пользователя
+
     currentUsername.textContent = username;
-    
-    // Определяем роль пользователя и настраиваем интерфейс
+
     setupUserInterface(username);
-    
-    // Загружаем контакты
-    loadContacts();
+
+    // Загружаем отделы для фильтра
+    initDepartmentFilter().then(() => {
+        // Загружаем контакты
+        loadContacts();
+    });
 }
 
 // Проверка, является ли пользователь администратором
@@ -101,51 +107,44 @@ function setupUserInterface(username) {
     let roleDisplay = 'Пользователь';
     let roleClass = 'role-user';
     let capabilities = '';
-    
+
     if (username === 'superadmin') {
         role = 'ROLE_SUPER_ADMIN';
         roleDisplay = 'Супер Админ';
         roleClass = 'role-super-admin';
         capabilities = 'Вы можете: просматривать, добавлять, редактировать и удалять контакты, а также управлять пользователями.';
-        
-        // Показываем кнопку управления пользователями
+
         if (usersManagementBtn) usersManagementBtn.style.display = 'flex';
         if (addContactBtn) addContactBtn.style.display = 'flex';
-        
+
     } else if (username === 'admin') {
         role = 'ROLE_ADMIN';
         roleDisplay = 'Администратор';
         roleClass = 'role-admin';
         capabilities = 'Вы можете: просматривать, добавлять, редактировать и удалять контакты.';
-        
-        // Скрываем кнопку управления пользователями
+
         if (usersManagementBtn) usersManagementBtn.style.display = 'none';
         if (addContactBtn) addContactBtn.style.display = 'flex';
-        
+
     } else if (username === 'moderator') {
         role = 'ROLE_MODERATOR';
         roleDisplay = 'Модератор';
         roleClass = 'role-moderator';
         capabilities = 'Вы можете: просматривать и редактировать контакты. Удаление контактов недоступно.';
-        
-        // Скрываем кнопку управления пользователями
+
         if (usersManagementBtn) usersManagementBtn.style.display = 'none';
-        // Модератор не может добавлять контакты
         if (addContactBtn) addContactBtn.style.display = 'none';
-        
+
     } else {
-        // Обычный пользователь не должен быть здесь
         window.location.href = 'phonebook.html';
         return;
     }
-    
-    // Обновляем бейдж роли
+
     if (userRoleBadge) {
         userRoleBadge.textContent = roleDisplay;
         userRoleBadge.className = `role-badge ${roleClass}`;
     }
-    
-    // Обновляем информацию о возможностях
+
     if (adminCapabilities) {
         adminCapabilities.textContent = capabilities;
     }
@@ -153,51 +152,48 @@ function setupUserInterface(username) {
 
 // Инициализация модальных окон
 function initModals() {
-    // Модальное окно контакта
     contactModal = document.getElementById('contactModal');
     const closeModalBtn = document.getElementById('closeModalBtn');
     const cancelModalBtn = document.getElementById('cancelModalBtn');
     const saveContactBtn = document.getElementById('saveContactBtn');
-    
+
     if (closeModalBtn) {
         closeModalBtn.addEventListener('click', () => {
             contactModal.classList.remove('active');
         });
     }
-    
+
     if (cancelModalBtn) {
         cancelModalBtn.addEventListener('click', () => {
             contactModal.classList.remove('active');
         });
     }
-    
+
     if (saveContactBtn) {
         saveContactBtn.addEventListener('click', saveContact);
     }
-    
-    // Модальное окно удаления
+
     deleteModal = document.getElementById('deleteModal');
     const closeDeleteModalBtn = document.getElementById('closeDeleteModalBtn');
     const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
     const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-    
+
     if (closeDeleteModalBtn) {
         closeDeleteModalBtn.addEventListener('click', () => {
             deleteModal.classList.remove('active');
         });
     }
-    
+
     if (cancelDeleteBtn) {
         cancelDeleteBtn.addEventListener('click', () => {
             deleteModal.classList.remove('active');
         });
     }
-    
+
     if (confirmDeleteBtn) {
         confirmDeleteBtn.addEventListener('click', confirmDeleteContact);
     }
-    
-    // Закрытие модальных окон при клике вне их
+
     window.addEventListener('click', (event) => {
         if (event.target === contactModal) {
             contactModal.classList.remove('active');
@@ -208,29 +204,92 @@ function initModals() {
     });
 }
 
+// Загрузка отделов
+async function loadDepartments() {
+    try {
+        const token = localStorage.getItem('jwtToken');
+        const response = await fetch('/api/departments', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            return await response.json();
+        }
+        return [];
+    } catch (error) {
+        console.error('Error loading departments:', error);
+        return [];
+    }
+}
+
+// Инициализация фильтра отделов
+async function initDepartmentFilter() {
+    const departments = await loadDepartments();
+    const filter = document.getElementById('departmentFilter');
+
+    if (filter) {
+        filter.innerHTML = '<option value="">Все отделы</option>';
+
+        departments.forEach(dept => {
+            const option = document.createElement('option');
+            option.value = dept.departmentId;
+            option.textContent = dept.departmentName;
+            filter.appendChild(option);
+        });
+    }
+}
+
+// Инициализация select отделов в модальном окне
+async function initDepartmentSelect() {
+    const departments = await loadDepartments();
+    const select = document.getElementById('contactDepartment');
+
+    if (select) {
+        select.innerHTML = '<option value="">Выберите отдел</option>';
+
+        departments.forEach(dept => {
+            const option = document.createElement('option');
+            option.value = dept.departmentId;
+            option.textContent = dept.departmentName;
+            select.appendChild(option);
+        });
+    }
+}
+
 // Загрузка контактов
-async function loadContacts(searchQuery = '') {
+async function loadContacts(searchQuery = '', departmentId = '') {
     showLoading(true);
-    
+
     try {
         const token = localStorage.getItem('jwtToken');
         if (!token) {
             window.location.href = '/index.html';
             return;
         }
-        
-        let url = `${API_BASE_URL}/api/contacts`;
+
+        let url = '/api/contacts';
+        let params = new URLSearchParams();
+
         if (searchQuery) {
-            url = `${API_BASE_URL}/api/contacts/search?query=${encodeURIComponent(searchQuery)}`;
+            params.append('query', searchQuery);
+            url = '/api/contacts/search';
+        } else if (departmentId) {
+            url = `/api/contacts/department/${departmentId}`;
         }
-        
+
+        if (searchQuery && url === '/api/contacts/search') {
+            url += '?' + params.toString();
+        }
+
         const response = await fetch(url, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
-        
+
         if (response.ok) {
             const contacts = await response.json();
             displayContacts(contacts);
@@ -251,10 +310,8 @@ async function loadContacts(searchQuery = '') {
 function displayContacts(contacts) {
     if (!contactsTableBody) return;
 
-    // Очищаем таблицу
     contactsTableBody.innerHTML = '';
 
-    // Показываем сообщение, если контактов нет
     const noContactsMessage = document.getElementById('noContactsMessage');
     if (noContactsMessage) {
         if (!contacts || contacts.length === 0) {
@@ -265,30 +322,25 @@ function displayContacts(contacts) {
         }
     }
 
-    // Получаем роли пользователя
     const userRoles = getCurrentUserRoles();
     const isModerator = userRoles.includes('ROLE_MODERATOR') && !userRoles.includes('ROLE_ADMIN') && !userRoles.includes('ROLE_SUPER_ADMIN');
     const isAdmin = userRoles.includes('ROLE_ADMIN') || userRoles.includes('ROLE_SUPER_ADMIN');
 
-    // Добавляем контакты в таблицу
     contacts.forEach(contact => {
         const row = document.createElement('tr');
 
-        // Полное имя для отображения
         const fullName = `${contact.contactLastName || ''} ${contact.contactFirstName || ''} ${contact.contactPatronymic || ''}`.trim();
+        const departmentName = contact.department ? contact.department.departmentName : 'Не указан';
 
-        // Определяем, какие кнопки действий показывать
         let actionsHTML = '';
 
         if (isModerator) {
-            // Модераторы могут только редактировать
             actionsHTML = `
                 <button class="btn btn-secondary btn-sm edit-btn" data-id="${contact.contactId}">
                     <i class="fas fa-edit"></i> Редактировать
                 </button>
             `;
         } else if (isAdmin) {
-            // Админы и супер-админы могут все
             actionsHTML = `
                 <button class="btn btn-secondary btn-sm edit-btn" data-id="${contact.contactId}">
                     <i class="fas fa-edit"></i> Редактировать
@@ -305,6 +357,7 @@ function displayContacts(contacts) {
             <td>${contact.contactFirstName || ''}</td>
             <td>${contact.contactPatronymic || ''}</td>
             <td>${contact.contactPosition || ''}</td>
+            <td>${departmentName}</td>
             <td>${contact.contactPhoneNumber || ''}</td>
             <td>${contact.contactInternalNumber || ''}</td>
             <td>
@@ -316,7 +369,6 @@ function displayContacts(contacts) {
 
         contactsTableBody.appendChild(row);
 
-        // Назначаем обработчики для кнопок
         const editBtn = row.querySelector('.edit-btn');
         const deleteBtn = row.querySelector('.delete-btn');
 
@@ -353,39 +405,48 @@ function getCurrentUserRoles() {
 // Обработка поиска
 function handleSearch() {
     clearTimeout(searchTimeout);
-    
+
     searchTimeout = setTimeout(() => {
         const query = searchInput.value.trim();
-        loadContacts(query);
+        const departmentId = departmentFilter ? departmentFilter.value : '';
+        loadContacts(query, departmentId);
     }, 300);
 }
 
+// Обработка фильтра по отделам
+function handleDepartmentFilter() {
+    const departmentId = this.value;
+    const searchQuery = searchInput ? searchInput.value.trim() : '';
+    loadContacts(searchQuery, departmentId);
+}
+
 // Показать модальное окно добавления контакта
-function showAddContactModal() {
-    // Проверяем права пользователя
+async function showAddContactModal() {
     const username = localStorage.getItem('currentUser') || '';
     if (username === 'moderator') {
         showMessage('У вас нет прав для добавления контактов', 'error');
         return;
     }
-    
+
     const modalTitle = document.getElementById('modalTitle');
     if (modalTitle) modalTitle.textContent = 'Добавить контакт';
-    
-    // Очищаем форму
+
     document.getElementById('contactForm').reset();
     document.getElementById('contactId').value = '';
-    
+
+    // Загружаем отделы
+    await initDepartmentSelect();
+    document.getElementById('contactDepartment').value = '';
+
     currentContactId = null;
     contactModal.classList.add('active');
 }
 
 // Показать модальное окно редактирования контакта
-function showEditContactModal(contact) {
+async function showEditContactModal(contact) {
     const modalTitle = document.getElementById('modalTitle');
     if (modalTitle) modalTitle.textContent = 'Редактировать контакт';
-    
-    // Заполняем форму данными контакта
+
     document.getElementById('contactId').value = contact.contactId;
     document.getElementById('contactFirstName').value = contact.contactFirstName || '';
     document.getElementById('contactLastName').value = contact.contactLastName || '';
@@ -393,14 +454,22 @@ function showEditContactModal(contact) {
     document.getElementById('contactPosition').value = contact.contactPosition || '';
     document.getElementById('contactPhoneNumber').value = contact.contactPhoneNumber || '';
     document.getElementById('contactInternalNumber').value = contact.contactInternalNumber || '';
-    
+
+    // Загружаем отделы и выбираем текущий
+    await initDepartmentSelect();
+    if (contact.department && contact.department.departmentId) {
+        document.getElementById('contactDepartment').value = contact.department.departmentId;
+    } else {
+        document.getElementById('contactDepartment').value = '';
+    }
+
     currentContactId = contact.contactId;
     contactModal.classList.add('active');
 }
 
-// Сохранение контакта (добавление или обновление)
+// Сохранение контакта
 async function saveContact() {
-    // Собираем данные из формы
+    const departmentId = document.getElementById('contactDepartment').value;
     const contactData = {
         contactFirstName: document.getElementById('contactFirstName').value,
         contactLastName: document.getElementById('contactLastName').value,
@@ -409,44 +478,46 @@ async function saveContact() {
         contactPhoneNumber: document.getElementById('contactPhoneNumber').value,
         contactInternalNumber: document.getElementById('contactInternalNumber').value
     };
-    
-    // Проверяем обязательные поля
-    if (!contactData.contactFirstName || !contactData.contactLastName || 
+
+    if (!contactData.contactFirstName || !contactData.contactLastName ||
         !contactData.contactPosition || !contactData.contactPhoneNumber) {
         showMessage('Пожалуйста, заполните все обязательные поля (помечены *)', 'error');
         return;
     }
-    
+
+    // Добавляем отдел если выбран
+    if (departmentId) {
+        contactData.department = {
+            departmentId: parseInt(departmentId)
+        };
+    }
+
     const token = localStorage.getItem('jwtToken');
     if (!token) {
         window.location.href = '/index.html';
         return;
     }
-    
-    // Проверяем права пользователя
+
     const username = localStorage.getItem('currentUser') || '';
     const isEdit = !!currentContactId;
-    
-    // Модератор не может добавлять контакты
+
     if (!isEdit && username === 'moderator') {
         showMessage('У вас нет прав для добавления контактов', 'error');
         contactModal.classList.remove('active');
         return;
     }
-    
+
     try {
         let url, method;
-        
+
         if (currentContactId) {
-            // Редактирование существующего контакта
-            url = `${API_BASE_URL}/api/contacts/${currentContactId}`;
+            url = `/api/contacts/${currentContactId}`;
             method = 'PUT';
         } else {
-            // Добавление нового контакта
-            url = `${API_BASE_URL}/api/contacts`;
+            url = '/api/contacts';
             method = 'POST';
         }
-        
+
         const response = await fetch(url, {
             method: method,
             headers: {
@@ -455,11 +526,16 @@ async function saveContact() {
             },
             body: JSON.stringify(contactData)
         });
-        
+
         if (response.ok) {
             showMessage(`Контакт успешно ${currentContactId ? 'обновлен' : 'добавлен'}!`, 'success');
             contactModal.classList.remove('active');
-            loadContacts(searchInput.value.trim());
+
+            // Перезагружаем контакты с учетом фильтров
+            const searchQuery = searchInput ? searchInput.value.trim() : '';
+            const departmentId = departmentFilter ? departmentFilter.value : '';
+            loadContacts(searchQuery, departmentId);
+
         } else if (response.status === 403) {
             showMessage('У вас нет прав для выполнения этого действия', 'error');
         } else {
@@ -473,16 +549,15 @@ async function saveContact() {
 
 // Показать модальное окно подтверждения удаления
 function showDeleteContactModal(contactId, contactName) {
-    // Проверяем права пользователя
     const username = localStorage.getItem('currentUser') || '';
     if (username === 'moderator') {
         showMessage('У вас нет прав для удаления контактов', 'error');
         return;
     }
-    
+
     const deleteContactName = document.getElementById('deleteContactName');
     if (deleteContactName) deleteContactName.textContent = contactName;
-    
+
     currentContactId = contactId;
     deleteModal.classList.add('active');
 }
@@ -494,27 +569,31 @@ async function confirmDeleteContact() {
         window.location.href = '/index.html';
         return;
     }
-    
-    // Проверяем права пользователя
+
     const username = localStorage.getItem('currentUser') || '';
     if (username === 'moderator') {
         showMessage('У вас нет прав для удаления контактов', 'error');
         deleteModal.classList.remove('active');
         return;
     }
-    
+
     try {
-        const response = await fetch(`${API_BASE_URL}/api/contacts/${currentContactId}`, {
+        const response = await fetch(`/api/contacts/${currentContactId}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
-        
+
         if (response.ok) {
             showMessage('Контакт успешно удален!', 'success');
             deleteModal.classList.remove('active');
-            loadContacts(searchInput.value.trim());
+
+            // Перезагружаем контакты с учетом фильтров
+            const searchQuery = searchInput ? searchInput.value.trim() : '';
+            const departmentId = departmentFilter ? departmentFilter.value : '';
+            loadContacts(searchQuery, departmentId);
+
         } else if (response.status === 403) {
             showMessage('У вас нет прав для удаления контактов', 'error');
         } else {
@@ -541,8 +620,7 @@ function showMessage(message, type = 'info') {
         messageBox.textContent = message;
         messageBox.className = `message-box ${type}`;
         messageBox.style.display = 'block';
-        
-        // Автоматически скрыть сообщение через 5 секунд
+
         if (type === 'success') {
             setTimeout(() => {
                 messageBox.style.display = 'none';
@@ -550,3 +628,9 @@ function showMessage(message, type = 'info') {
         }
     }
 }
+
+// Защита от зависания загрузки
+setTimeout(() => {
+    console.log('Автоматическое скрытие загрузки через 5 секунд');
+    showLoading(false);
+}, 5000);
